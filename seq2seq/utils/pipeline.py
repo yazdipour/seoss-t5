@@ -45,7 +45,7 @@ class Text2SQLGenerationPipeline(Text2TextGenerationPipeline):
         self.schema_serialization_randomized: bool = kwargs.pop("schema_serialization_randomized", False)
         self.schema_serialization_with_db_id: bool = kwargs.pop("schema_serialization_with_db_id", True)
         self.schema_serialization_with_db_content: bool = kwargs.pop("schema_serialization_with_db_content", True)
-        self.schema_cache: Dict[str, dict] = dict()
+        self.schema_cache: Dict[str, dict] = {}
         super().__init__(*args, **kwargs)
 
     def __call__(self, inputs: Union[Text2SQLInput, List[Text2SQLInput]], *args, **kwargs):
@@ -92,8 +92,7 @@ class Text2SQLGenerationPipeline(Text2TextGenerationPipeline):
         truncation=TruncationStrategy.DO_NOT_TRUNCATE,
         **kwargs
     ) -> BatchEncoding:
-        encodings = self._parse_and_tokenize(inputs, *args, truncation=truncation, **kwargs)
-        return encodings
+        return self._parse_and_tokenize(inputs, *args, truncation=truncation, **kwargs)
 
     def _parse_and_tokenize(
         self,
@@ -122,7 +121,7 @@ class Text2SQLGenerationPipeline(Text2TextGenerationPipeline):
     def _pre_process(self, input: Text2SQLInput) -> str:
         prefix = self.prefix if self.prefix is not None else ""
         if input.db_id not in self.schema_cache:
-            print (self.db_path + "/" + input.db_id)
+            print(f"{self.db_path}/{input.db_id}")
             self.schema_cache[input.db_id] = get_schema(db_path=self.db_path, db_id=input.db_id)
         schema = self.schema_cache[input.db_id]
         if hasattr(self.model, "add_schema"):
@@ -194,7 +193,7 @@ class ConversationalText2SQLGenerationPipeline(Text2TextGenerationPipeline):
         self.schema_serialization_randomized: bool = kwargs.pop("schema_serialization_randomized", False)
         self.schema_serialization_with_db_id: bool = kwargs.pop("schema_serialization_with_db_id", True)
         self.schema_serialization_with_db_content: bool = kwargs.pop("schema_serialization_with_db_content", True)
-        self.schema_cache: Dict[str, dict] = dict()
+        self.schema_cache: Dict[str, dict] = {}
         super().__init__(*args, **kwargs)
 
     def __call__(self, inputs: Union[ConversationalText2SQLInput, List[ConversationalText2SQLInput]], *args, **kwargs):
@@ -241,8 +240,7 @@ class ConversationalText2SQLGenerationPipeline(Text2TextGenerationPipeline):
         truncation=TruncationStrategy.DO_NOT_TRUNCATE,
         **kwargs,
     ) -> BatchEncoding:
-        encodings = self._parse_and_tokenize(inputs, *args, truncation=truncation, **kwargs)
-        return encodings
+        return self._parse_and_tokenize(inputs, *args, truncation=truncation, **kwargs)
 
     def _parse_and_tokenize(
         self,
@@ -271,7 +269,7 @@ class ConversationalText2SQLGenerationPipeline(Text2TextGenerationPipeline):
     def _pre_process(self, input: ConversationalText2SQLInput) -> str:
         prefix = self.prefix if self.prefix is not None else ""
         if input.db_id not in self.schema_cache:
-            print (self.db_path + "/" + input.db_id)
+            print(f"{self.db_path}/{input.db_id}")
             self.schema_cache[input.db_id] = get_schema(db_path=self.db_path, db_id=input.db_id)
         schema = self.schema_cache[input.db_id]
         if hasattr(self.model, "add_schema"):
@@ -311,17 +309,27 @@ class ConversationalText2SQLGenerationPipeline(Text2TextGenerationPipeline):
 
 
 def get_schema(db_path: str, db_id: str) -> dict:
-    schema = dump_db_json_schema(db_path + "/" + db_id + "/" + db_id + ".sqlite", db_id)
+    schema = dump_db_json_schema(f"{db_path}/{db_id}/{db_id}.sqlite", db_id)
     return {
         "db_table_names": schema["table_names_original"],
         "db_column_names": {
-            "table_id": [table_id for table_id, _ in schema["column_names_original"]],
-            "column_name": [column_name for _, column_name in schema["column_names_original"]],
+            "table_id": [
+                table_id for table_id, _ in schema["column_names_original"]
+            ],
+            "column_name": [
+                column_name
+                for _, column_name in schema["column_names_original"]
+            ],
         },
         "db_column_types": schema["column_types"],
-        "db_primary_keys": {"column_id": [column_id for column_id in schema["primary_keys"]]},
+        "db_primary_keys": {"column_id": list(schema["primary_keys"])},
         "db_foreign_keys": {
-            "column_id": [column_id for column_id, _ in schema["foreign_keys"]],
-            "other_column_id": [other_column_id for _, other_column_id in schema["foreign_keys"]],
+            "column_id": [
+                column_id for column_id, _ in schema["foreign_keys"]
+            ],
+            "other_column_id": [
+                other_column_id
+                for _, other_column_id in schema["foreign_keys"]
+            ],
         },
     }

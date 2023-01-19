@@ -42,45 +42,45 @@ with open ("crawled_data.json", "w") as f:
 all_pages = {"version": "0.1.0", "data": []}
 
 for file in files:
-	with open(file) as json_file:
-		data = json_file.read().split('\n')
-		for page in data:
+    with open(file) as json_file:
+        data = json_file.read().split('\n')
+        for page in data:
 
-			print(count_pages)
-	    	
-			try:
-				page = ast.literal_eval(page)
-			except Exception:
-				count+= 1
-				continue
+            print(count_pages)
 
-			print(page['metadata']['url'])
-			try:
-				text = clean_page(parse_html(page['html']))
-				count_pages += 1
-				words = text.split(" ")
-				i = 0
-				if len(words)> 330:
-					print("un exemplu cand s desperte data.....")
-					print(text)
-					print("-----------------------")
+            try:
+            	page = ast.literal_eval(page)
+            except Exception:
+            	count+= 1
+            	continue
 
-				while i<len(words):
-					end = i+330 if (i+330<=len(words)) else len(words) 
-					all_pages['data'].append({"metadata":page['metadata'], "text":" ".join(words[i:end])})
-					i += 330
-					
+            print(page['metadata']['url'])
+            try:
+                text = clean_page(parse_html(page['html']))
+                count_pages += 1
+                words = text.split(" ")
+                i = 0
+                if len(words)> 330:
+                	print("un exemplu cand s desperte data.....")
+                	print(text)
+                	print("-----------------------")
 
-			except Exception:
-				error_documents.append(page['metadata']['url'])
-				continue
+                while i<len(words):
+                    end = min(i+330, len(words))
+                    all_pages['data'].append({"metadata":page['metadata'], "text":" ".join(words[i:end])})
+                    i += 330
+
+
+            except Exception:
+            	error_documents.append(page['metadata']['url'])
+            	continue
 
 with open ("crawled_data.json", "w") as f:
 	json.dump(all_pages, f)
-	    	
+
 print(error_documents)
-print("Errors in cleaning the html to text" + str(len(error_documents)))
-print("Errors while parsing" + str(count))
+print(f"Errors in cleaning the html to text{len(error_documents)}")
+print(f"Errors while parsing{str(count)}")
 
 with open ("crawled_data.json", "r") as f:
 	json.load(f)

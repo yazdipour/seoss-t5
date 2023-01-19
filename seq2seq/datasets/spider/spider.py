@@ -58,7 +58,7 @@ class Spider(datasets.GeneratorBasedBuilder):
 
     def __init__(self, *args, writer_batch_size=None, **kwargs) -> None:
         super().__init__(*args, writer_batch_size=writer_batch_size, **kwargs)
-        self.schema_cache = dict()
+        self.schema_cache = {}
         self.include_train_others: bool = kwargs.pop("include_train_others", False)
 
     def _info(self) -> datasets.DatasetInfo:

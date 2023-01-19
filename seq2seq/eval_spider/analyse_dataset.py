@@ -29,33 +29,15 @@ def form_clause_str(sql_dict, delimiter='|'):
     """
     Given a dictionary of SQL clauses, form a string encoding them
     """
-    ##############################
-    # 
-    # select: is distinct, aggregation
-    # from
-    # from: no. tables
-    # where: has and/or, has nested subquery
-    # groupBy
-    # having: has and/or, aggregation, has nested subquery
-    # orderBy: is asc/desc
-    # limit
-    # union
-    # intersect
-    # except
-    # 
-    ##############################
-    clause_str = ""
-    no_clauses = 0
-
     # select clause
     select = sql_dict.get('select')
-    clause_str += "SELECT "
-    no_clauses += 1
+    clause_str = "" + "SELECT "
+    no_clauses = 0 + 1
     if select[0]:
         clause_str += "DISTINCT "
     for unit in select[1]:
         if unit[0] != 0:
-            clause_str += AGG_OPS[unit[0]] + " "
+            clause_str += f"{AGG_OPS[unit[0]]} "
     clause_str += delimiter
 
     # from clause
@@ -69,9 +51,7 @@ def form_clause_str(sql_dict, delimiter='|'):
     clause_str += str(no_tables)
     clause_str += delimiter
 
-    # where clause
-    where = sql_dict.get('where')
-    if where:
+    if where := sql_dict.get('where'):
         clause_str += "WHERE "
         no_clauses += 1
         if 'and' in where:
@@ -79,22 +59,19 @@ def form_clause_str(sql_dict, delimiter='|'):
         if 'or' in where:
             clause_str += "OR "
         for unit in where:
-            if type(unit) != str:
-                if type(unit[3]) == dict or type(unit[4]) == dict:
-                    clause_str += "SUBQUERY "
-                    break
+            if type(unit) != str and (
+                type(unit[3]) == dict or type(unit[4]) == dict
+            ):
+                clause_str += "SUBQUERY "
+                break
     clause_str += delimiter
-    
-    # group by clause
-    group_by = sql_dict.get('groupBy')
-    if group_by:
+
+    if group_by := sql_dict.get('groupBy'):
         clause_str += "GROUP BY "
         no_clauses += 1
     clause_str += delimiter
-    
-    # having clause
-    having = sql_dict.get('having')
-    if having:
+
+    if having := sql_dict.get('having'):
         clause_str += "HAVING "
         no_clauses += 1
         if 'and' in having:
@@ -104,44 +81,37 @@ def form_clause_str(sql_dict, delimiter='|'):
         for unit in having:
             if type(unit) != str:
                 if unit[2][1][0] != 0:
-                    clause_str += AGG_OPS[unit[2][1][0]] + " "
+                    clause_str += f"{AGG_OPS[unit[2][1][0]]} "
                 if unit[2][2] and unit[2][2][0] != 0:
-                    clause_str += AGG_OPS[unit[2][2][0]] + " "
+                    clause_str += f"{AGG_OPS[unit[2][2][0]]} "
         for unit in having:
-            if type(unit) != str:
-                if type(unit[3]) == dict or type(unit[4]) == dict:
-                    clause_str += "SUBQUERY "
-                    break
+            if type(unit) != str and (
+                type(unit[3]) == dict or type(unit[4]) == dict
+            ):
+                clause_str += "SUBQUERY "
+                break
     clause_str += delimiter
-    
-    # order by clause
-    order_by = sql_dict.get('orderBy')
-    if order_by:
-        clause_str += "ORDER BY " + order_by[0] + " "
+
+    if order_by := sql_dict.get('orderBy'):
+        clause_str += f"ORDER BY {order_by[0]} "
         no_clauses += 1
     clause_str += delimiter
-    
-    # limit clause
-    limit = sql_dict.get('limit')
-    if limit:
-        clause_str += "LIMIT " + str(limit) + " "
+
+    if limit := sql_dict.get('limit'):
+        clause_str += f"LIMIT {str(limit)} "
         no_clauses += 1
     clause_str += delimiter
-    
-    # union clause
-    union = sql_dict.get('union')
-    if union:
+
+    if union := sql_dict.get('union'):
         clause_str += "UNION "
         no_clauses += 1
     clause_str += delimiter
-    
-    # intersect clause
-    intersect = sql_dict.get('intersect')
-    if intersect:
+
+    if intersect := sql_dict.get('intersect'):
         clause_str += "INTERSECT "
         no_clauses += 1
     clause_str += delimiter
-    
+
     # except clause
     if sql_dict.get('except'):
         clause_str += "EXCEPT "
@@ -162,11 +132,7 @@ def analyse_dataset(dataset_name):
     query_data = []
 
     dataset_file = f"../../dataset_files/ori_dataset/{dataset_name}/"
-    if dataset_name == "spider_dk":
-        dataset_file += "spider-DK.json"
-    else:
-        dataset_file += "dev.json"
-
+    dataset_file += "spider-DK.json" if dataset_name == "spider_dk" else "dev.json"
     with open(dataset_file, 'r') as input_file:
         instances = json.load(input_file)
         for i in instances:

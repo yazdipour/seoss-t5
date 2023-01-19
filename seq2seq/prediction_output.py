@@ -68,7 +68,9 @@ def main():
         picard_args, prediction_output_args, data_training_args = parser.parse_args_into_dataclasses()
 
     if os.path.isfile(prediction_output_args.output_path):
-        raise RuntimeError("file `{}` already exists".format(prediction_output_args.output_path))
+        raise RuntimeError(
+            f"file `{prediction_output_args.output_path}` already exists"
+        )
 
     # Initialize config
     config = AutoConfig.from_pretrained(
@@ -142,7 +144,7 @@ def text2sql(model, tokenizer, prediction_output_args, data_training_args):
             except Exception as e:
                 logger.error(e)
                 query = ""
-            logger.info("writing `{}` to `{}`".format(query, prediction_output_args.output_path))
+            logger.info(f"writing `{query}` to `{prediction_output_args.output_path}`")
             bar.text(query)
             bar()
             with open(prediction_output_args.output_path, "a") as fp:
@@ -174,7 +176,7 @@ def conversational_text2sql(model, tokenizer, prediction_output_args, data_train
                 except Exception as e:
                     logger.error(e)
                     query = ""
-                logger.info("writing `{}` to `{}`".format(query, prediction_output_args.output_path))
+                logger.info(f"writing `{query}` to `{prediction_output_args.output_path}`")
                 bar.text(query)
                 bar()
                 with open(prediction_output_args.output_path, "a") as fp:

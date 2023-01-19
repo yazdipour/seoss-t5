@@ -87,7 +87,7 @@ class CoSQL(datasets.GeneratorBasedBuilder):
 
     def __init__(self, *args, writer_batch_size=None, **kwargs):
         super().__init__(*args, writer_batch_size=writer_batch_size, **kwargs)
-        self.schema_cache = dict()
+        self.schema_cache = {}
 
     def _info(self):
         features = datasets.Features(
@@ -130,15 +130,15 @@ class CoSQL(datasets.GeneratorBasedBuilder):
             datasets.SplitGenerator(
                 name=datasets.Split.TRAIN,
                 gen_kwargs={
-                    "data_filepath": downloaded_filepath + "/cosql_dataset/sql_state_tracking/cosql_train.json",
-                    "db_path": downloaded_filepath + "/cosql_dataset/database",
+                    "data_filepath": f"{downloaded_filepath}/cosql_dataset/sql_state_tracking/cosql_train.json",
+                    "db_path": f"{downloaded_filepath}/cosql_dataset/database",
                 },
             ),
             datasets.SplitGenerator(
                 name=datasets.Split.VALIDATION,
                 gen_kwargs={
-                    "data_filepath": downloaded_filepath + "/cosql_dataset/sql_state_tracking/cosql_dev.json",
-                    "db_path": downloaded_filepath + "/cosql_dataset/database",
+                    "data_filepath": f"{downloaded_filepath}/cosql_dataset/sql_state_tracking/cosql_dev.json",
+                    "db_path": f"{downloaded_filepath}/cosql_dataset/database",
                 },
             ),
         ]
@@ -153,7 +153,7 @@ class CoSQL(datasets.GeneratorBasedBuilder):
                 db_id = sample["database_id"]
                 if db_id not in self.schema_cache:
                     self.schema_cache[db_id] = dump_db_json_schema(
-                        db_path + "/" + db_id + "/" + db_id + ".sqlite", db_id
+                        f"{db_path}/{db_id}/{db_id}.sqlite", db_id
                     )
                 schema = self.schema_cache[db_id]
 

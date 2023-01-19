@@ -210,7 +210,7 @@ class DatasetSplits(object):
 
 
 def _get_schemas(examples: Dataset) -> Dict[str, dict]:
-    schemas: Dict[str, dict] = dict()
+    schemas: Dict[str, dict] = {}
     for ex in examples:
         if ex["db_id"] not in schemas:
             schemas[ex["db_id"]] = {
@@ -324,7 +324,7 @@ def prepare_splits(
         }
         test_split_schemas = {}
         for split in test_splits.values():
-            test_split_schemas.update(split.schemas)
+            test_split_schemas |= split.schemas
 
     schemas = {
         **(train_split.schemas if train_split is not None else {}),
@@ -408,7 +408,7 @@ def serialize_schema(
                 question=question,
                 table_name=table_name,
                 column_name=column_name,
-                db_path=(db_path + "/" + db_id + "/" + db_id + ".sqlite"),
+                db_path=f"{db_path}/{db_id}/{db_id}.sqlite",
             )
             if matches:
                 column_str =  column_str_with_values.format(column=column_name_str, values=value_sep.join(matches))
@@ -424,7 +424,7 @@ def serialize_schema(
           column_ref_id = pair2[pair1.index(i)]
         elif i in pair2 and (pair1[pair2.index(i)] in db_primary_keys['column_id'] or no_or_both_primary_key):
           column_ref_id = pair1[pair2.index(i)]
-        
+
         if column_ref_id != -1:
             
             # primary_key_column = db_column_names['column_name'][column_ref_id]
@@ -433,11 +433,12 @@ def serialize_schema(
             primary_key_table = db_table_names[int(db_column_names['table_id'][column_ref_id])]
             primary_key_table = primary_key_table.lower() if normalize_query else primary_key_table
 
-            column_str = column_str +  ' foreign key ' + primary_key_table + ' '# + '.' + primary_key_column +''
+            column_str = f'{column_str} foreign key {primary_key_table} '
 
 
-        
+
         return column_str
+
     tables = [
         table_str.format(
             table=table_name.lower() if normalize_query else table_name,
@@ -464,7 +465,7 @@ def serialize_schema(
         serialized_schema = table_sep.join(tables)
     if schema_serialization_with_db_description:
       serialized_schema += desc_sep + description
-    print('serializes: ' + serialized_schema)
+    print(f'serializes: {serialized_schema}')
     return serialized_schema
 
 

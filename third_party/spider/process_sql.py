@@ -96,13 +96,11 @@ class Schema:
         id = 1
         for key, vals in schema.items():
             for val in vals:
-                idMap[key.lower() + "." + val.lower()] = (
-                    "__" + key.lower() + "." + val.lower() + "__"
-                )
+                idMap[f"{key.lower()}.{val.lower()}"] = f"__{key.lower()}.{val.lower()}__"
                 id += 1
 
         for key in schema:
-            idMap[key.lower()] = "__" + key.lower() + "__"
+            idMap[key.lower()] = f"__{key.lower()}__"
             id += 1
 
         return idMap
@@ -126,7 +124,7 @@ def get_schema(db):
 
     # fetch table info
     for table in tables:
-        cursor.execute("PRAGMA table_info({})".format(table))
+        cursor.execute(f"PRAGMA table_info({table})")
         schema[table] = [str(col[1].lower()) for col in cursor.fetchall()]
 
     return schema
@@ -159,7 +157,7 @@ def tokenize(string):
         qidx1 = quote_idxs[i - 1]
         qidx2 = quote_idxs[i]
         val = string[qidx1 : qidx2 + 1]
-        key = "__val_{}_{}__".format(qidx1, qidx2)
+        key = f"__val_{qidx1}_{qidx2}__"
         string = string[:qidx1] + key + string[qidx2 + 1 :]
         vals[key] = val
 
@@ -176,7 +174,7 @@ def tokenize(string):
     for eq_idx in eq_idxs:
         pre_tok = toks[eq_idx - 1]
         if pre_tok in prefix:
-            toks = toks[: eq_idx - 1] + [pre_tok + "="] + toks[eq_idx + 1 :]
+            toks = toks[: eq_idx - 1] + [f"{pre_tok}="] + toks[eq_idx + 1 :]
 
     return toks
 
@@ -184,16 +182,13 @@ def tokenize(string):
 def scan_alias(toks):
     """Scan the index of 'as' and build the map for all alias"""
     as_idxs = [idx for idx, tok in enumerate(toks) if tok == "as"]
-    alias = {}
-    for idx in as_idxs:
-        alias[toks[idx + 1]] = toks[idx - 1]
-    return alias
+    return {toks[idx + 1]: toks[idx - 1] for idx in as_idxs}
 
 
 def get_tables_with_alias(schema, toks):
     tables = scan_alias(toks)
     for key in schema:
-        assert key not in tables, "Alias {} has the same name in table".format(key)
+        assert key not in tables, f"Alias {key} has the same name in table"
         tables[key] = key
     return tables
 
@@ -208,7 +203,7 @@ def parse_col(toks, start_idx, tables_with_alias, schema, default_tables=None):
 
     if "." in tok:  # if token is a composite
         alias, col = tok.split(".")
-        key = tables_with_alias[alias] + "." + col
+        key = f"{tables_with_alias[alias]}.{col}"
         return start_idx + 1, schema.idMap[key]
 
     assert (
@@ -218,10 +213,10 @@ def parse_col(toks, start_idx, tables_with_alias, schema, default_tables=None):
     for alias in default_tables:
         table = tables_with_alias[alias]
         if tok in schema.schema[table]:
-            key = table + "." + tok
+            key = f"{table}.{tok}"
             return start_idx + 1, schema.idMap[key]
-    
-    assert False, "Error col: {}".format(tok)
+
+    assert False, f"Error col: {tok}"
 
 
 def parse_col_unit(toks, start_idx, tables_with_alias, schema, default_tables=None):
@@ -299,11 +294,7 @@ def parse_table_unit(toks, start_idx, tables_with_alias, schema):
     len_ = len(toks)
     key = tables_with_alias[toks[idx]]
 
-    if idx + 1 < len_ and toks[idx + 1] == "as":
-        idx += 3
-    else:
-        idx += 1
-
+    idx += 3 if idx + 1 < len_ and toks[idx + 1] == "as" else 1
     return idx, schema.idMap[key], key
 
 
@@ -365,7 +356,7 @@ def parse_condition(toks, start_idx, tables_with_alias, schema, default_tables=N
 
         assert (
             idx < len_ and toks[idx] in WHERE_OPS
-        ), "Error condition: idx: {}, tok: {}".format(idx, toks[idx])
+        ), f"Error condition: idx: {idx}, tok: {toks[idx]}"
         op_id = WHERE_OPS.index(toks[idx])
         idx += 1
         val1 = val2 = None
@@ -473,7 +464,7 @@ def parse_from(toks, start_idx, tables_with_alias, schema):
             idx, this_conds = parse_condition(
                 toks, idx, tables_with_alias, schema, default_tables
             )
-            if len(conds) > 0:
+            if conds:
                 conds.append("and")
             conds.extend(this_conds)
 
@@ -510,7 +501,11 @@ def parse_group_by(toks, start_idx, tables_with_alias, schema, default_tables):
     assert toks[idx] == "by"
     idx += 1
 
-    while idx < len_ and not (toks[idx] in CLAUSE_KEYWORDS or toks[idx] in (")", ";")):
+    while (
+        idx < len_
+        and toks[idx] not in CLAUSE_KEYWORDS
+        and toks[idx] not in (")", ";")
+    ):
         idx, col_unit = parse_col_unit(
             toks, idx, tables_with_alias, schema, default_tables
         )
@@ -536,7 +531,11 @@ def parse_order_by(toks, start_idx, tables_with_alias, schema, default_tables):
     assert toks[idx] == "by"
     idx += 1
 
-    while idx < len_ and not (toks[idx] in CLAUSE_KEYWORDS or toks[idx] in (")", ";")):
+    while (
+        idx < len_
+        and toks[idx] not in CLAUSE_KEYWORDS
+        and toks[idx] not in (")", ";")
+    ):
         idx, val_unit = parse_val_unit(
             toks, idx, tables_with_alias, schema, default_tables
         )
@@ -571,11 +570,7 @@ def parse_limit(toks, start_idx):
     if idx < len_ and toks[idx] == "limit":
         idx += 2
         # make limit value can work, cannot assume put 1 as a fake limit number
-        if type(toks[idx - 1]) != int:
-            return idx, 1
-
-        return idx, int(toks[idx - 1])
-
+        return (idx, 1) if type(toks[idx - 1]) != int else (idx, int(toks[idx - 1]))
     return idx, None
 
 
@@ -584,7 +579,6 @@ def parse_sql(toks, start_idx, tables_with_alias, schema):
     len_ = len(toks)
     idx = start_idx
 
-    sql = {}
     if toks[idx] == "(":
         isBlock = True
         idx += 1
@@ -593,7 +587,7 @@ def parse_sql(toks, start_idx, tables_with_alias, schema):
     from_end_idx, table_units, conds, default_tables = parse_from(
         toks, start_idx, tables_with_alias, schema
     )
-    sql["from"] = {"table_units": table_units, "conds": conds}
+    sql = {"from": {"table_units": table_units, "conds": conds}}
     # select clause
     _, select_col_units = parse_select(
         toks, idx, tables_with_alias, schema, default_tables

@@ -30,7 +30,7 @@ class Schema:
             else:
                 key = table_names_original[tab_id].lower()
                 val = col.lower()
-                idMap[key + "." + val] = i
+                idMap[f"{key}.{val}"] = i
 
         for i, tab in enumerate(table_names_original):
             key = tab.lower()

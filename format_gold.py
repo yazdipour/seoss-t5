@@ -11,9 +11,7 @@ def format_gold(json_filename):
 
     with open(json_filename, 'r') as input_file:
         all_instances = json.loads(input_file.read())
-        for p in all_instances:
-            gold_queries.append(f"{p['query']}\t{p['db_id']}")
-
+        gold_queries.extend(f"{p['query']}\t{p['db_id']}" for p in all_instances)
     out_filename = os.path.join(os.path.dirname(json_filename), "dev_gold.sql")
 
     with open(out_filename, 'w') as output_file:
