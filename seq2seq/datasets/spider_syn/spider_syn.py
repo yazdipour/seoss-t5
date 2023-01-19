@@ -53,7 +53,7 @@ class SpiderSyn(datasets.GeneratorBasedBuilder):
 
     def __init__(self, *args, writer_batch_size=None, **kwargs) -> None:
         super().__init__(*args, writer_batch_size=writer_batch_size, **kwargs)
-        self.schema_cache = dict()
+        self.schema_cache = {}
         self.include_train_others: bool = kwargs.pop("include_train_others", False)
 
     def _info(self) -> datasets.DatasetInfo:
@@ -97,18 +97,20 @@ class SpiderSyn(datasets.GeneratorBasedBuilder):
 
         return [
             datasets.SplitGenerator(
-                name = datasets.Split.VALIDATION,
+                name=datasets.Split.VALIDATION,
                 gen_kwargs={
-                    "data_filepaths":[downloaded_filepath + "/spider-syn/spider-syn.json"],
-                    "db_path": downloaded_filepath + "/spider-syn/database",
+                    "data_filepaths": [
+                        f"{downloaded_filepath}/spider-syn/spider-syn.json"
+                    ],
+                    "db_path": f"{downloaded_filepath}/spider-syn/database",
                 },
-            ),
+            )
         ]
     
     def _generate_examples(
         self, data_filepaths: List[str], db_path: str
     ) -> Generator[Tuple[int, Dict[str, Any]], None, None]:
-    
+
         for data_filepath in data_filepaths:
             if(data_filepath.find('train_spider.json')>=0):
                 question_field = "question"
@@ -121,7 +123,7 @@ class SpiderSyn(datasets.GeneratorBasedBuilder):
                     db_id = sample['db_id']
                     if db_id not in self.schema_cache:
                         self.schema_cache[db_id] = dump_db_json_schema(
-                            db_path + "/" + db_id + "/" + db_id + ".sqlite", db_id
+                            f"{db_path}/{db_id}/{db_id}.sqlite", db_id
                         )
                     schema = self.schema_cache[db_id]
                     yield idx, {

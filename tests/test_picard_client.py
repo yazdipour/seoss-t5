@@ -48,7 +48,6 @@ async def test_register_sql_schema(
             except RegisterSQLSchemaException:
                 # db already registered
                 logger.warning(f"schema already registered: {db_id}")
-                pass
             logger.info(f"{db_id} registered")
 
 
@@ -90,7 +89,7 @@ async def test_feedParser(
                 for token in tokens:
                     await _feed(client, input_ids_, token, with_guards)
                     bar()
-        logger.info(f"synchronously feeding complete")
+        logger.info("synchronously feeding complete")
 
     async with get_picard_client() as client:
         logger.info(
@@ -101,7 +100,7 @@ async def test_feedParser(
             for f in asyncio.as_completed(futures):
                 await f
                 bar()
-        logger.info(f"asynchronously feeding complete")
+        logger.info("asynchronously feeding complete")
 
 
 def in_vitro_picard(
@@ -166,8 +165,8 @@ sql_schemas = {
         tableNames={"0": "table"},
         columnToTable={"0": "0"},
         tableToColumns={"0": ["0"]},
-        foreignKeys=dict(),
-        primaryKeys=list(),
+        foreignKeys={},
+        primaryKeys=[],
     ),
     "car_1": SQLSchema(
         columnNames={

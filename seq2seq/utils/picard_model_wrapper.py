@@ -105,7 +105,9 @@ def with_picard(
     tokenizer: PreTrainedTokenizerFast,
     schemas: Optional[Dict[str, dict]] = None,
 ):
-    schema_cache: Dict[str, dict] = deepcopy(schemas) if schemas is not None else dict()
+    schema_cache: Dict[str, dict] = (
+        deepcopy(schemas) if schemas is not None else {}
+    )
 
     def get_picard_client() -> AsyncContextManager[Picard]:
         return get_client(
@@ -129,7 +131,6 @@ def with_picard(
         except RegisterSQLSchemaException:
             # db already registered
             logger.debug(f"schema already registered: {db_id}")
-            pass
 
     async def _register_schema_without_client(db_id: str, db_info: dict) -> None:
         async with get_picard_client() as client:
@@ -141,7 +142,7 @@ def with_picard(
         await picard_client.registerTokenizer(json_str)
 
     def _add_schema(db_id: str, db_info: dict) -> None:
-        if not db_id in schema_cache:
+        if db_id not in schema_cache:
             schema_cache[db_id] = deepcopy(db_info)
             asyncio.run(_register_schema_without_client(db_id=db_id, db_info=db_info), debug=False)
         else:
@@ -462,7 +463,7 @@ class PicardLogitsProcessor(LogitsProcessor):
             mode = Mode.LEXING
         elif self.mode == "parse_without_guards":
             mode = Mode.PARSING_WITHOUT_GUARDS
-        elif self.mode == "parse" or self.mode == "parse_with_guards":
+        elif self.mode in ["parse", "parse_with_guards"]:
             mode = Mode.PARSING_WITH_GUARDS
         elif self.mode == "parse_with_guards_and_type_checking":
             mode = Mode.PARSING_WITH_GUARDS_AND_TYPE_CHECKING
@@ -495,15 +496,15 @@ class PicardLogitsProcessor(LogitsProcessor):
             raise ValueError("unexpected picard parsing result")
 
     async def _check_token(self, client: Picard, input_ids: List[int], token: int) -> bool:
-        if self.schedule == "incremental":
-            # check at every step
+        if (
+            self.schedule != "incremental"
+            and self.schedule == "finalizing"
+            and token == self.eos_token_id
+            or self.schedule == "incremental"
+        ):
             return await self._feed(client=client, input_ids=input_ids, token=token)
         elif self.schedule == "finalizing":
-            # only check when decoded string is finalized
-            if token == self.eos_token_id:
-                return await self._feed(client=client, input_ids=input_ids, token=token)
-            else:
-                return True
+            return True
         else:
             raise ValueError("unexpected picard schedule")
 
@@ -560,7 +561,7 @@ class PicardLogitsProcessor(LogitsProcessor):
             mode = Mode.LEXING
         elif self.mode == "parse_without_guards":
             mode = Mode.PARSING_WITHOUT_GUARDS
-        elif self.mode == "parse" or self.mode == "parse_with_guards":
+        elif self.mode in ["parse", "parse_with_guards"]:
             mode = Mode.PARSING_WITH_GUARDS
         elif self.mode == "parse_with_guards_and_type_checking":
             mode = Mode.PARSING_WITH_GUARDS_AND_TYPE_CHECKING
@@ -651,28 +652,36 @@ def get_picard_schema(
     db_foreign_keys: Dict[str, List[int]],
 ) -> SQLSchema:
     star_id = next((c_id for c_id, c_name in enumerate(db_column_names["column_name"]) if c_name == "*"))
-    column_names = dict(
-        (str(c_id), c_name) for c_id, c_name in enumerate(db_column_names["column_name"]) if c_id != star_id
-    )
-    column_types = dict(
-        (str(c_id), _get_picard_column_type(c_type)) for c_id, c_type in enumerate(db_column_types) if c_id != star_id
-    )
-    table_names = dict((str(t_id), t_name) for t_id, t_name in enumerate(db_table_names))
-    column_to_table = dict(
-        (str(c_id), str(t_id))
-        for c_id, (t_id, _c_name) in enumerate(zip(db_column_names["table_id"], db_column_names["column_name"]))
+    column_names = {
+        str(c_id): c_name
+        for c_id, c_name in enumerate(db_column_names["column_name"])
         if c_id != star_id
-    )
+    }
+    column_types = {
+        str(c_id): _get_picard_column_type(c_type)
+        for c_id, c_type in enumerate(db_column_types)
+        if c_id != star_id
+    }
+    table_names = {str(t_id): t_name for t_id, t_name in enumerate(db_table_names)}
+    column_to_table = {
+        str(c_id): str(t_id)
+        for c_id, (t_id, _c_name) in enumerate(
+            zip(db_column_names["table_id"], db_column_names["column_name"])
+        )
+        if c_id != star_id
+    }
     table_to_columns = collections.defaultdict(list)
     for c_id, (t_id, _c_name) in enumerate(zip(db_column_names["table_id"], db_column_names["column_name"])):
         if c_id == star_id:
             continue
         table_to_columns[str(t_id)].append(str(c_id))
-    foreign_keys = dict(
-        (str(c_id), str(other_c_id))
-        for c_id, other_c_id in zip(db_foreign_keys["column_id"], db_foreign_keys["other_column_id"])
+    foreign_keys = {
+        str(c_id): str(other_c_id)
+        for c_id, other_c_id in zip(
+            db_foreign_keys["column_id"], db_foreign_keys["other_column_id"]
+        )
         if c_id != star_id and other_c_id != star_id
-    )
+    }
     primary_keys = [str(c_id) for c_id in db_primary_keys["column_id"] if c_id != star_id]
     return SQLSchema(
         columnNames=column_names,

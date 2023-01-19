@@ -8,8 +8,7 @@ def get_sql_predictions_filename(predictions_filename):
     Returns an output sql filename based on the given predictions filename
     """
     predictions_dir = os.path.dirname(predictions_filename)
-    output_filename = os.path.join(predictions_dir, 'predictions.sql')
-    return output_filename
+    return os.path.join(predictions_dir, 'predictions.sql')
 
 
 def format_predictions(in_filename):
@@ -20,9 +19,9 @@ def format_predictions(in_filename):
 
     with open(in_filename, 'r') as input_file:
         all_predictions = json.loads(input_file.read())
-        for p in all_predictions:
-            predicted_queries.append(p['prediction'].split('| ')[-1])
-
+        predicted_queries.extend(
+            p['prediction'].split('| ')[-1] for p in all_predictions
+        )
     out_filename = get_sql_predictions_filename(in_filename)
 
     with open(out_filename, 'w') as output_file:

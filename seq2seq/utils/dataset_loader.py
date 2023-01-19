@@ -175,14 +175,6 @@ def load_dataset(
             pre_process_function=_spider_pre_process_function,
             **_prepare_splits_kwargs,
         )
-    elif data_args.dataset == "spider_dk":
-        metric = _spider_dk_metric()
-        dataset_splits = prepare_splits(
-            dataset_dict= _spider_dk_dataset_dict(),
-            add_serialized_schema=_spider_add_serialized_schema,
-            pre_process_function=_spider_pre_process_function,
-            **_prepare_splits_kwargs,
-        )
     elif data_args.dataset == "spider_syn":
         metric = _spider_syn_metric()
         dataset_splits = prepare_splits(

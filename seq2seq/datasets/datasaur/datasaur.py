@@ -35,7 +35,7 @@ class Datasaur(datasets.GeneratorBasedBuilder):
 
     def __init__(self, *args, writer_batch_size=None, **kwargs) -> None:
         super().__init__(*args, writer_batch_size=writer_batch_size, **kwargs)
-        self.schema_cache = dict()
+        self.schema_cache = {}
         self.include_train_others: bool = kwargs.pop("include_train_others", False)
 
     def _info(self) -> datasets.DatasetInfo:
@@ -81,17 +81,16 @@ class Datasaur(datasets.GeneratorBasedBuilder):
                 name=datasets.Split.TRAIN,
                 gen_kwargs={
                     "data_filepaths": [
-                        downloaded_filepath +"/datasaur/train_datasaur.json",
+                        f"{downloaded_filepath}/datasaur/train_datasaur.json"
                     ],
-                    
-                    "db_path": downloaded_filepath +  "/datasaur/database",
+                    "db_path": f"{downloaded_filepath}/datasaur/database",
                 },
             ),
             datasets.SplitGenerator(
                 name=datasets.Split.VALIDATION,
                 gen_kwargs={
-                    "data_filepaths": [downloaded_filepath + "/datasaur/dev.json"],
-                    "db_path": downloaded_filepath + "/datasaur/database",
+                    "data_filepaths": [f"{downloaded_filepath}/datasaur/dev.json"],
+                    "db_path": f"{downloaded_filepath}/datasaur/database",
                 },
             ),
         ]
@@ -108,9 +107,9 @@ class Datasaur(datasets.GeneratorBasedBuilder):
                 for idx, sample in enumerate(spider):
                     db_id = sample["db_id"]
                     if db_id not in self.schema_cache:
-                        print(db_path + "/" + db_id + "/" + db_id + ".sqlite")
+                        print(f"{db_path}/{db_id}/{db_id}.sqlite")
                         self.schema_cache[db_id] = dump_db_json_schema(
-                            db_path + "/" + db_id + "/" + db_id + ".sqlite", db_id
+                            f"{db_path}/{db_id}/{db_id}.sqlite", db_id
                         )
                     schema = self.schema_cache[db_id]
                     yield idx, {

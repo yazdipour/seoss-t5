@@ -127,7 +127,7 @@ def main():
         class AskResponse(BaseModel):
             query: str
             execution_results: list
-        
+
         def response(query: str, conn: Connection) -> AskResponse:
             try:
                 return AskResponse(query=query, execution_results=conn.execute(query).fetchall())
@@ -146,7 +146,7 @@ def main():
             except OperationalError as e:
                 raise HTTPException(status_code=404, detail=e.args[0])
             try:
-                conn = connect(backend_args.db_path + "/" + db_id + "/" + db_id + ".sqlite")
+                conn = connect(f"{backend_args.db_path}/{db_id}/{db_id}.sqlite")
                 return [response(query=output["generated_text"], conn=conn) for output in outputs]
             finally:
                 conn.close()

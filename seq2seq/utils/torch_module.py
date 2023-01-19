@@ -22,16 +22,10 @@ class Module(Module):
             prefix = ''
         for name, param in self._parameters.items():
             if param is not None:
-                if 'module.' in name:
-                    n = name[7:]
-                else:
-                    n = name[:]
+                n = name[7:] if 'module.' in name else name[:]
                 destination[prefix + n] = param if keep_vars else param.detach()
         for name, buf in self._buffers.items():
-            if 'module.' in name:
-                n = name[7:]
-            else:
-                n = name[:]
+            n = name[7:] if 'module.' in name else name[:]
             if buf is not None and n not in self._non_persistent_buffers_set:
                 destination[prefix + n] = buf if keep_vars else buf.detach()
         super()._save_to_state_dict(destination, prefix, keep_vars)

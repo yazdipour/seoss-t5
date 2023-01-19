@@ -57,12 +57,10 @@ def dump_db_json_schema(db, f):
         table_name = item[0]
         data["table_names_original"].append(table_name)
         data["table_names"].append(table_name.lower().replace("_", " "))
-        fks = conn.execute(
-            "PRAGMA foreign_key_list('{}') ".format(table_name)
-        ).fetchall()
+        fks = conn.execute(f"PRAGMA foreign_key_list('{table_name}') ").fetchall()
         # print("db:{} table:{} fks:{}".format(f,table_name,fks))
         fk_holder.extend([[(table_name, fk[3]), (fk[2], fk[4])] for fk in fks])
-        cur = conn.execute("PRAGMA table_info('{}') ".format(table_name))
+        cur = conn.execute(f"PRAGMA table_info('{table_name}') ")
         for j, col in enumerate(cur.fetchall()):
             data["column_names_original"].append((i, col[1]))
             data["column_names"].append((i, col[1].lower().replace("_", " ")))
@@ -113,7 +111,9 @@ if __name__ == "__main__":
     ex_tab_file = sys.argv[3]
 
     all_fs = [
-        df for df in listdir(input_dir) if exists(join(input_dir, df, df + ".sqlite"))
+        df
+        for df in listdir(input_dir)
+        if exists(join(input_dir, df, f"{df}.sqlite"))
     ]
     with open(ex_tab_file) as f:
         ex_tabs = json.load(f)
@@ -124,14 +124,14 @@ if __name__ == "__main__":
     not_fs = [
         df
         for df in listdir(input_dir)
-        if not exists(join(input_dir, df, df + ".sqlite"))
+        if not exists(join(input_dir, df, f"{df}.sqlite"))
     ]
     for d in not_fs:
         print("no sqlite file found in: ", d)
     db_files = [
-        (df + ".sqlite", df)
+        (f"{df}.sqlite", df)
         for df in listdir(input_dir)
-        if exists(join(input_dir, df, df + ".sqlite"))
+        if exists(join(input_dir, df, f"{df}.sqlite"))
     ]
     tables = []
     for f, df in db_files:
@@ -146,7 +146,7 @@ if __name__ == "__main__":
         cur_tab_num = len(table["table_names"])
         cur_col_num = len(table["column_names"])
         if (
-            df in ex_tabs.keys()
+            df in ex_tabs
             and prev_tab_num == cur_tab_num
             and prev_col_num == cur_col_num
             and prev_tab_num != 0

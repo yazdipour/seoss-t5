@@ -51,7 +51,7 @@ def is_commonword(s: str) -> bool:
 
 
 def is_common_db_term(s: str) -> bool:
-    return s.strip() in ["id"]
+    return s.strip() in {"id"}
 
 
 class Match(object):
@@ -124,12 +124,8 @@ def get_matched_entries(
     if not field_values:
         return None
 
-    if isinstance(s, str):
-        n_grams = split(s)
-    else:
-        n_grams = s
-
-    matched = dict()
+    n_grams = split(s) if isinstance(s, str) else s
+    matched = {}
     for field_value in field_values:
         if not isinstance(field_value, str):
             continue
@@ -159,15 +155,14 @@ def get_matched_entries(
                         or is_stopword(c_field_value)
                     ):
                         continue
-                    if c_source_match_str.endswith(c_match_str + "'s"):
+                    if c_source_match_str.endswith(f"{c_match_str}'s"):
                         match_score = 1.0
+                    elif prefix_match(c_field_value, c_source_match_str):
+                        match_score = (
+                            fuzz.ratio(c_field_value, c_source_match_str) / 100
+                        )
                     else:
-                        if prefix_match(c_field_value, c_source_match_str):
-                            match_score = (
-                                fuzz.ratio(c_field_value, c_source_match_str) / 100
-                            )
-                        else:
-                            match_score = 0
+                        match_score = 0
                     if (
                         is_commonword(c_match_str)
                         or is_commonword(c_source_match_str)
@@ -175,9 +170,14 @@ def get_matched_entries(
                     ) and match_score < 1:
                         continue
                     s_match_score = match_score
-                    if match_score >= m_theta and s_match_score >= s_theta:
-                        if field_value.isupper() and match_score * s_match_score < 1:
-                            continue
+                    if (
+                        match_score >= m_theta
+                        and s_match_score >= s_theta
+                        and (
+                            not field_value.isupper()
+                            or match_score * s_match_score >= 1
+                        )
+                    ):
                         matched[match_str] = (
                             field_value,
                             source_match_str,
@@ -186,19 +186,20 @@ def get_matched_entries(
                             match.size,
                         )
 
-    if not matched:
-        return None
-    else:
-        return sorted(
+    return (
+        sorted(
             matched.items(),
             key=lambda x: (1e16 * x[1][2] + 1e8 * x[1][3] + x[1][4]),
             reverse=True,
         )
+        if matched
+        else None
+    )
 
 
 @functools.lru_cache(maxsize=1000, typed=False)
 def get_column_picklist(table_name: str, column_name: str, db_path: str) -> list:
-    fetch_sql = "SELECT DISTINCT `{}` FROM `{}`".format(column_name, table_name)
+    fetch_sql = f"SELECT DISTINCT `{column_name}` FROM `{table_name}`"
     try:
         conn = sqlite3.connect(db_path)
         conn.text_factory = bytes
@@ -234,13 +235,12 @@ def get_database_matches(
     )
     matches = []
     if picklist and isinstance(picklist[0], str):
-        matched_entries = get_matched_entries(
+        if matched_entries := get_matched_entries(
             s=question,
             field_values=picklist,
             m_theta=match_threshold,
             s_theta=match_threshold,
-        )
-        if matched_entries:
+        ):
             num_values_inserted = 0
             for _match_str, (
                 field_value,

@@ -11,9 +11,7 @@ def save_predictions(experiment_path):
 
     with open('results_sql.csv', 'r') as file:
         reader = csv.reader(file, quoting=csv.QUOTE_ALL)
-        for line in reader:
-            predictions.append(line[1])
-
+        predictions.extend(line[1] for line in reader)
     out_filename = os.path.join(experiment_path, 'predictions_eval_None.json')
 
     with open(out_filename, 'r') as file:

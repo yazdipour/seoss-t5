@@ -18,7 +18,7 @@ def build_query(website_list, crawl_domain):
     # build source SQL string list
 
     website_list_str = ''
-    for i, website in enumerate(website_list):
+    for website in website_list:
         website_list_str += f" regexp_like (url, '{website}.*(kpi|revenue|metrics|return|order|session|(gross%profit)|(gross%revenue)|(net%profit)|(net%revenue)|conversion).*')"
         website_list_str += ' or '
     return("""
@@ -106,7 +106,7 @@ def download_single_result(result):
 
     result["html"] = ""
 
-    if len(data) > 0:
+    if data != "":
         data_parts = data.strip().split("\r\n\r\n", 2)
         result["html"] = data_parts[2] if len(data_parts) == 3 else ""
 
@@ -142,7 +142,7 @@ def run_build_corpus(credentials_path, website_list, crawl_domain, cc_metadata_p
                              crawl_domain=crawl_domain,
                              cc_metadata_path=cc_metadata_path)
 
-        print("for: {} ".format(crawl_domain))
+        print(f"for: {crawl_domain} ")
         print(f'len of dataframe is: {len(df)}')
         print(df.groupby('url_host_registered_domain')['url'].count())
         end_metadata = time.time()
@@ -243,4 +243,10 @@ if __name__ == "__main__":
 
     for i, crawl in enumerate(crawls):
         i = i+8
-        run_build_corpus("/home/gabisoare01971/datasaur/credentials.csv",e_commerce_domains, crawl, "/home/gabisoare01971/datasaur/metadata"+str(i)+".csv", "/home/gabisoare01971/datasaur/html"+str(i)+".json")
+        run_build_corpus(
+            "/home/gabisoare01971/datasaur/credentials.csv",
+            e_commerce_domains,
+            crawl,
+            f"/home/gabisoare01971/datasaur/metadata{str(i)}.csv",
+            f"/home/gabisoare01971/datasaur/html{str(i)}.json",
+        )

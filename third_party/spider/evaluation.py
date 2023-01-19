@@ -120,21 +120,15 @@ def has_agg(unit):
 
 
 def accuracy(count, total):
-    if count == total:
-        return 1
-    return 0
+    return 1 if count == total else 0
 
 
 def recall(count, total):
-    if count == total:
-        return 1
-    return 0
+    return 1 if count == total else 0
 
 
 def F1(acc, rec):
-    if (acc + rec) == 0:
-        return 0
-    return (2.0 * acc * rec) / (acc + rec)
+    return 0 if (acc + rec) == 0 else (2.0 * acc * rec) / (acc + rec)
 
 
 def get_scores(count, pred_total, label_total):
@@ -166,8 +160,8 @@ def eval_sel(pred, label):
 
 
 def eval_where(pred, label):
-    pred_conds = [unit for unit in pred["where"][::2]]
-    label_conds = [unit for unit in label["where"][::2]]
+    pred_conds = list(pred["where"][::2])
+    label_conds = list(label["where"][::2])
     label_wo_agg = [unit[2] for unit in label_conds]
     pred_total = len(pred_conds)
     label_total = len(label_conds)
@@ -227,15 +221,11 @@ def eval_order(pred, label):
         pred_total = 1
     if len(label["orderBy"]) > 0:
         label_total = 1
-    if (
-        len(label["orderBy"]) > 0
-        and pred["orderBy"] == label["orderBy"]
-        and (
+        if pred["orderBy"] == label["orderBy"] and (
             (pred["limit"] is None and label["limit"] is None)
             or (pred["limit"] is not None and label["limit"] is not None)
-        )
-    ):
-        cnt = 1
+        ):
+            cnt = 1
     return label_total, pred_total, cnt
 
 
@@ -245,9 +235,7 @@ def eval_and_or(pred, label):
     pred_ao = set(pred_ao)
     label_ao = set(label_ao)
 
-    if pred_ao == label_ao:
-        return 1, 1, 1
-    return len(pred_ao), len(label_ao), 0
+    return (1, 1, 1) if pred_ao == label_ao else (len(pred_ao), len(label_ao), 0)
 
 
 def get_nestedSQL(sql):
@@ -312,38 +300,28 @@ def get_keywords(sql):
 
     # or keyword
     ao = sql["from"]["conds"][1::2] + sql["where"][1::2] + sql["having"][1::2]
-    if len([token for token in ao if token == "or"]) > 0:
+    if [token for token in ao if token == "or"]:
         res.add("or")
 
     cond_units = sql["from"]["conds"][::2] + sql["where"][::2] + sql["having"][::2]
     # not keyword
-    if len([cond_unit for cond_unit in cond_units if cond_unit[0]]) > 0:
+    if [cond_unit for cond_unit in cond_units if cond_unit[0]]:
         res.add("not")
 
     # in keyword
-    if (
-        len(
-            [
-                cond_unit
-                for cond_unit in cond_units
-                if cond_unit[1] == WHERE_OPS.index("in")
-            ]
-        )
-        > 0
-    ):
+    if [
+        cond_unit
+        for cond_unit in cond_units
+        if cond_unit[1] == WHERE_OPS.index("in")
+    ]:
         res.add("in")
 
     # like keyword
-    if (
-        len(
-            [
-                cond_unit
-                for cond_unit in cond_units
-                if cond_unit[1] == WHERE_OPS.index("like")
-            ]
-        )
-        > 0
-    ):
+    if [
+        cond_unit
+        for cond_unit in cond_units
+        if cond_unit[1] == WHERE_OPS.index("like")
+    ]:
         res.add("like")
 
     return res
@@ -354,11 +332,7 @@ def eval_keywords(pred, label):
     label_keywords = get_keywords(label)
     pred_total = len(pred_keywords)
     label_total = len(label_keywords)
-    cnt = 0
-
-    for k in pred_keywords:
-        if k in label_keywords:
-            cnt += 1
+    cnt = sum(k in label_keywords for k in pred_keywords)
     return label_total, pred_total, cnt
 
 
@@ -439,7 +413,7 @@ class Evaluator:
         self.db_paths = {}
         self.schemas = {}
         for db_name in self.kmaps.keys():
-            db_path = os.path.join(db_dir, db_name, db_name + ".sqlite")
+            db_path = os.path.join(db_dir, db_name, f"{db_name}.sqlite")
             self.db_paths[db_name] = db_path
             self.schemas[db_name] = Schema(get_schema(db_path))
 
@@ -495,16 +469,16 @@ class Evaluator:
 
     @classmethod
     def eval_partial_match(cls, pred, label):
-        res = {}
-
         label_total, pred_total, cnt, cnt_wo_agg = eval_sel(pred, label)
         acc, rec, f1 = get_scores(cnt, pred_total, label_total)
-        res["select"] = {
-            "acc": acc,
-            "rec": rec,
-            "f1": f1,
-            "label_total": label_total,
-            "pred_total": pred_total,
+        res = {
+            "select": {
+                "acc": acc,
+                "rec": rec,
+                "f1": f1,
+                "label_total": label_total,
+                "pred_total": pred_total,
+            }
         }
         acc, rec, f1 = get_scores(cnt_wo_agg, pred_total, label_total)
         res["select(no AGG)"] = {
@@ -742,19 +716,6 @@ def isValidSQL(sql, db):
 
 def print_scores(scores, etype):
     LEVELS = ["easy", "medium", "hard", "extra", "all"]
-    PARTIAL_TYPES = [
-        "select",
-        "select(no AGG)",
-        "where",
-        "where(no OP)",
-        "group(no Having)",
-        "group",
-        "order",
-        "and/or",
-        "IUEN",
-        "keywords",
-    ]
-
     print("{:20} {:20} {:20} {:20} {:20} {:20}".format("", *LEVELS))
     counts = [scores[level]["count"] for level in LEVELS]
     print("{:20} {:<20d} {:<20d} {:<20d} {:<20d} {:<20d}".format("count", *counts))
@@ -777,6 +738,19 @@ def print_scores(scores, etype):
             )
         )
         print("\n---------------------PARTIAL MATCHING ACCURACY----------------------")
+        PARTIAL_TYPES = [
+            "select",
+            "select(no AGG)",
+            "where",
+            "where(no OP)",
+            "group(no Having)",
+            "group",
+            "order",
+            "and/or",
+            "IUEN",
+            "keywords",
+        ]
+
         for type_ in PARTIAL_TYPES:
             this_scores = [scores[level]["partial"][type_]["acc"] for level in LEVELS]
             print(
@@ -847,9 +821,9 @@ def eval_exec_match(db, p_str, g_str, pred, gold):
         rmap = {}
         for idx, val_unit in enumerate(val_units):
             key = (
-                tuple(val_unit[1])
-                if not val_unit[2]
-                else (val_unit[0], tuple(val_unit[1]), tuple(val_unit[2]))
+                (val_unit[0], tuple(val_unit[1]), tuple(val_unit[2]))
+                if val_unit[2]
+                else tuple(val_unit[1])
             )
             rmap[key] = [r[idx] for r in res]
         return rmap
@@ -865,14 +839,8 @@ def rebuild_cond_unit_val(cond_unit):
         return cond_unit
 
     not_op, op_id, val_unit, val1, val2 = cond_unit
-    if type(val1) is not dict:
-        val1 = None
-    else:
-        val1 = rebuild_sql_val(val1)
-    if type(val2) is not dict:
-        val2 = None
-    else:
-        val2 = rebuild_sql_val(val2)
+    val1 = None if type(val1) is not dict else rebuild_sql_val(val1)
+    val2 = None if type(val2) is not dict else rebuild_sql_val(val2)
     return not_op, op_id, val_unit, val1, val2
 
 
@@ -911,11 +879,11 @@ def build_valid_col_units(table_units, schema):
         if table_unit[0] == TABLE_TYPE["table_unit"]
     ]
     prefixs = [col_id[:-2] for col_id in col_ids]
-    valid_col_units = []
-    for value in list(schema.idMap.values()):
-        if "." in value and value[: value.index(".")] in prefixs:
-            valid_col_units.append(value)
-    return valid_col_units
+    return [
+        value
+        for value in list(schema.idMap.values())
+        if "." in value and value[: value.index(".")] in prefixs
+    ]
 
 
 def rebuild_col_unit_col(valid_col_units, col_unit, kmap):
@@ -1040,7 +1008,7 @@ def build_foreign_key_map(entry):
         if col_orig[0] >= 0:
             t = tables_orig[col_orig[0]]
             c = col_orig[1]
-            cols.append("__" + t.lower() + "." + c.lower() + "__")
+            cols.append(f"__{t.lower()}.{c.lower()}__")
         else:
             cols.append("__all__")
 
@@ -1073,10 +1041,7 @@ def build_foreign_key_map(entry):
 def build_foreign_key_map_from_json(table):
     with open(table) as f:
         data = json.load(f)
-    tables = {}
-    for entry in data:
-        tables[entry["db_id"]] = build_foreign_key_map(entry)
-    return tables
+    return {entry["db_id"]: build_foreign_key_map(entry) for entry in data}
 
 
 def main(gold, pred, db_dir, table, etype, output):

@@ -16,7 +16,7 @@ def cosql_get_input(
     # "[prefix] [utterance n] [serialized schema] || [utterance n-1] | [utterance n-2] | ..."
     if len(utterances) > 1:
         reversed_utterance_head = (utterance.strip() for utterance in reversed(utterances[:-1]))
-        serialized_reversed_utterance_head = " || " + sep.join(reversed_utterance_head)
+        serialized_reversed_utterance_head = f" || {sep.join(reversed_utterance_head)}"
     else:
         serialized_reversed_utterance_head = ""
     return prefix + utterances[-1].strip() + " " + serialized_schema.strip() + serialized_reversed_utterance_head

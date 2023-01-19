@@ -121,7 +121,7 @@ def detect_english(page, min_probability=0.99):
     return
   if best_prediction.lang != "en":
     counter_inc_fn("filtered:ignored_language")
-    counter_inc_fn("filtered:ignored_language-%s" % (best_prediction.lang,))
+    counter_inc_fn(f"filtered:ignored_language-{best_prediction.lang}")
     return
 
   counter_inc_fn("passed")

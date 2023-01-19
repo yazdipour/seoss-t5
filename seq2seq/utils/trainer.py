@@ -104,7 +104,7 @@ class Seq2SeqTrainer(transformers.trainer_seq2seq.Seq2SeqTrainer):
                 eval_examples,
                 eval_dataset,
                 output.predictions,
-                "eval_{}".format(self.state.epoch),
+                f"eval_{self.state.epoch}",
             )
             output.metrics.update(self.compute_metrics(eval_preds))
 
